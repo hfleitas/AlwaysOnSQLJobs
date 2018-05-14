@@ -61,7 +61,7 @@ function Restart-ActiveReportServer
             #Write-Host "Trying $srv..." -ForegroundColor Yellow
             Write-Log -EventID 9911 -EntryType Information -Message "Trying to restart ReportServer service on $srv"      
             Get-Service -Computer $srv -Name "ReportServer" | Restart-Service;
-			#Servers: FLDSVRSQL05,MLBSVRSQL02,FLDSVRSQL03,FLDSVRSQW01,MLBSVRSQW01 
+			#Servers: 
             Write-Log -EventID 9912 -EntryType Information -Message "Restarted ReportServer service on $srv"
             Write-Host "Service Restarted on $srv!" -ForegroundColor Green
             $RestartOK = $true  
@@ -122,7 +122,7 @@ if ($IsPrimary.state -eq $true)
     else
     {
         Write-Host "Something whent wrong with the restart, please check the ResportServer service status manually on your servers! 
-		gsv -c FLDSVRSQL05,MLBSVRSQL02,FLDSVRSQL03,FLDSVRSQW01,MLBSVRSQW01 -n ReportServer|ft machinename,status" -foregroundcolor Red
+		gsv -c RPTSVR1,RPTSVR2,RPTSVR3 -n ReportServer|ft machinename,status" -foregroundcolor Red
     }
 
  }
