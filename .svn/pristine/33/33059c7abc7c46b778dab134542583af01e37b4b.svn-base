@@ -1,0 +1,144 @@
+###
+# SSRSFailover.ps1
+###
+
+#setting erroraction prefs to enable the SQL agent to catch errors in PS
+$erroractionpreference = "Stop"
+
+###
+# Setup SQL Querys
+###
+
+#Query to determine if the executing server is the primary AG server
+$is_primary_replica_query = @"
+    USE msdb;
+    DECLARE @state BIT = COALESCE((SELECT master.sys.fn_hadr_is_primary_replica(N'ReportServer')), 0);
+    SELECT	@state as state;
+"@
+
+#Query to delete all SSRS Subscription jobs
+$delete_ssrs_jobs_query = @"
+    USE msdb;
+    DECLARE @job_name VARCHAR(100);
+	DECLARE JOB_CURSOR CURSOR FOR
+	SELECT 
+		j.name 
+	FROM msdb.dbo.sysjobs J	
+		JOIN msdb.dbo.syscategories AS c ON j.category_id = c.category_id 
+			AND c.name = N'Report Server'   
+
+	OPEN JOB_CURSOR
+	FETCH NEXT FROM JOB_CURSOR INTO @job_name
+	WHILE @@FETCH_STATUS = 0
+	BEGIN 
+		EXEC msdb.dbo.sp_delete_job @job_name = @job_name, @delete_unused_schedule=1;
+		FETCH NEXT FROM JOB_CURSOR INTO @job_name
+	END
+
+	CLOSE JOB_CURSOR
+	DEALLOCATE JOB_CURSOR
+"@
+
+#Query to get list of Report Servers from the ReportServer DB
+$reportservers_list_query = @"
+    SELECT MachineName FROM [ReportServer].[dbo].[Keys] WHERE MachineName IS NOT NULL
+"@
+
+###
+# Create functions
+###
+
+#Function that gets a list of SSRS servers (even if there is only one) and tries to restart the ReportServer service on one of them.
+function Restart-ActiveReportServer
+ {
+    $RestartOK = $false
+    $RSServers = Invoke-Sqlcmd $reportservers_list_query -ServerInstance $env:computername
+    Foreach ($server in $RSServers)
+    {
+        try
+        {
+            $srv = $server.MachineName
+            #Write-Host "Trying $srv..." -ForegroundColor Yellow
+            Write-Log -EventID 9911 -EntryType Information -Message "Trying to restart ReportServer service on $srv"      
+            Get-Service -Computer $srv -Name "ReportServer" | Restart-Service;
+			#Servers: FLDSVRSQL05,MLBSVRSQL02,FLDSVRSQL03,FLDSVRSQW01,MLBSVRSQW01 
+            Write-Log -EventID 9912 -EntryType Information -Message "Restarted ReportServer service on $srv"
+            Write-Host "Service Restarted on $srv!" -ForegroundColor Green
+            $RestartOK = $true  
+            Break;
+        }
+        catch [Microsoft.PowerShell.Commands.ServiceCommandException]
+        {
+            Write-Log -EventID 9913 -EntryType Error -Message "Failed to restart ReportServer service on $srv. - Command was: Get-Service -Computer $srv -Name `"ReportServer`" - Debug info: $error"
+            Write-Host "Error restarting service on" + $server.MachineName + "Trying the next server..." -ForegroundColor Yellow
+        }
+    }
+    Return $RestartOK;
+ }
+
+#Function to write to the server application eventlog
+Function Write-Log
+ {
+    Param
+    (
+        [parameter(position=0)]
+        $EventId,
+        [parameter(position=1)]
+        $EntryType,
+        [parameter(position=2)]
+        $Message
+    )
+
+    #add the location of the script just in case
+    #$Message = $Message + " Script is located in $PSCommandPath"
+    Write-EventLog -LogName Application -Source "SQL Job: SSRS Failover" -EntryType $EntryType -EventID $EventId -Message $Message
+ }
+
+###
+# Executing the commands
+###
+
+Write-Log -EventID 9999 -EntryType Information -Message "Running SQL Job: SSRS Failover on $env:computername"
+
+#testing for primary replica status of this host
+$IsPrimary = Invoke-Sqlcmd $is_primary_replica_query -ServerInstance $env:computername
+
+#Write-Host "Checking if $env:computername is the current primary AG replica." -foregroundcolor green
+
+#Performing the required actions based on the tatus of the host in the AG.
+if ($IsPrimary.state -eq $true)
+ {
+    #Delete to refresh/replace
+    $enable = Invoke-Sqlcmd $delete_ssrs_jobs_query -ServerInstance $env:computername
+    Write-Log -EventID 9900 -EntryType Information -Message "$env:computername is now the primary node for SSRS Subscriptions and jobs have been deleted"
+
+    #Restart a reportserver to rebuild
+    Write-Log -EventID 9910 -EntryType Information -Message "Restarting SSRS svc on server(s) to refresh jobs."
+    $RestartSSRS = Restart-ActiveReportServer
+    if($RestartSSRS -eq $true) 
+    {
+        Write-Host "Done!" -foregroundcolor green
+    }
+    else
+    {
+        Write-Host "Something whent wrong with the restart, please check the ResportServer service status manually on your servers! 
+		gsv -c FLDSVRSQL05,MLBSVRSQL02,FLDSVRSQL03,FLDSVRSQW01,MLBSVRSQW01 -n ReportServer|ft machinename,status" -foregroundcolor Red
+    }
+
+ }
+elseif ($IsPrimary.state -eq $false)
+ {
+    #delete jobs because this server is not primary, they will be rebuilt/refreshed if AG failsover.
+    Write-Host "This is NOT the primary replica!" -ForegroundColor Yellow
+    Write-Host "Deleting if exists the SQL Agent jobs for the ReportServer category... (Please wait)" -ForegroundColor Yellow
+
+	$delete = Invoke-Sqlcmd $delete_ssrs_jobs_query -ServerInstance $env:computername
+    Write-Log -EventID 9901 -EntryType Warning -Message "SSRS Subscriptions have been disabled on this server since its no longer the primary node in the AG!"
+ }
+else
+ {
+    #This should not happen, but for some reason the servers AG membership could not be determined and we have to exit.
+    #Write-Host "Something whent wrong, the status of this node could not be determined!" -ForegroundColor Red
+    Write-Log -EntryType Error -EventID 9902 -Message "The SSRS Failover Script failed to determine its membership state! Your subscriptions might be in the wrong state now. Investigate and mitigate!"
+    break;
+ }

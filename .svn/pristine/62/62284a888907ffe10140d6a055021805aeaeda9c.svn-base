@@ -1,0 +1,30 @@
+﻿#
+#\\fldsvm_apps01\SQLSHARED\Deployments\20170912\Copy-DbaAgentJob.ps1#
+#
+<##Pre-req: 
+#Open PowerShell as Admin
+install-module dbatools
+import-module dbatools
+update-module dbatools
+update-dbatools
+Get-Help Copy-DbaAgentJob -ShowWindow
+#>
+
+#Refresh on Replicas and Enable.
+$replicas = 'FLDSVRSQL05','MLBSVRSQL02'
+foreach ($svr in $replicas)
+{
+	Copy-DbaAgentJob -Source FLDSVRSQL03 -Destination $svr -Job `
+	 'JOB_ClaimCheck' `
+	,'Maintenance - Nightly' `
+	,'Notifications - Claims For Monitored Agencies' `
+	,'Performers Circle Monthly Update' `
+	,'Populate BODHistory Tables' `
+	,'Populate Dialer Campaigns' `
+	,'Populate UV Direct Policy Stats' ` #pending
+	-Force |ft -AutoSize 
+}
+
+
+#Deploy Last. Refresh Jobs and Enable. Exclude system jobs.
+#Copy-DbaAgentJob -Source FLDSVRASP01 -Destination FLDSVRASP02 -ExcludeJob 'IndexOptimize - USER_DATABASES','CommandLog Cleanup','Output File Cleanup','Processing - Claim Documents','sp_delete_backuphistory','sp_purge_jobhistory','Backup.CheckDBs','Backup.Full2Local','Backup.Indexes','Backup.SystemDBs','Backup.TLogs','Backup.UserDBs','SQL Sentry 2.0 Alert Trap','SQL Sentry 2.0 Queue Monitor','syspolicy_purge_history','Expired subscription clean up' -Force |ft -AutoSize
