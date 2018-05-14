@@ -1,6 +1,6 @@
 ﻿-- Must run in SQLCMD.
 
-:connect FLDSVRSQL03
+:connect PRIMARYSVR
 go
 use msdb
 go

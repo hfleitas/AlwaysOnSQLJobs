@@ -1,5 +1,5 @@
 ﻿#
-#\\fldsvm_apps01\SQLSHARED\Deployments\20170912\Copy-DbaAgentJob.ps1#
+#\\nfs\SQLSHARED\Deployments\20170912\Copy-DbaAgentJob.ps1#
 #
 <##Pre-req: 
 #Open PowerShell as Admin
@@ -13,42 +13,42 @@ Get-Help Copy-DbaAgentJob -ShowWindow
 import-module dbatools
 
 #Refresh on Replicas and Enable.
-$replicas = 'FLDSVRSQL05','MLBSVRSQL02'
+$replicas = 'SECONDARYSVR1','SECONDARYSVR2'
 foreach ($svr in $replicas)
 {
-	Copy-DbaAgentJob -Source FLDSVRSQL03 -Destination $svr -Job `
-	 'Chk Local Drive Space' `
-	,'CommandLog Cleanup' `
-	,'IndexOptimize - USER_DATABASES' `
-	,'Maintenance - Nightly' `
-	,'JOB_ClaimCheck' `
-	,'Notifications - Claims For Monitored Agencies' `
-	,'Output File Cleanup' `
-	,'Performers Circle Monthly Update' `
-	,'Populate BODHistory Tables' `
-	,'Populate Dialer Campaigns' `
-	,'Populate UV Direct Policy Stats' `
-	,'PopulateEboxPositive' `
-	,'QUASR - MonthEndCapture' `
-	,'Recycle' `
-	,'Reload ISM' `
-	,'Reports - Agency Appointments' `
-	,'Reports - CatastropheModeling' `
-	,'Reports - High Dollar Renewals' `
-	,'Reports - Inforce' `
-	,'Reports - Report Change Monitor' `
-	,'Reports - Reported and Closed' `
-	,'Reports - Reported and Closed (MTD)' `
-	,'sp_delete_backuphistory' `
-	,'sp_purge_jobhistory' `
-	,'syspolicy_purge_history' `
+	Copy-DbaAgentJob -Source PRIMARYSVR -Destination $svr -Job `
+	 'Job1' `
+	,'Job2' `
+	,'Job3' `
+	,'Job4' `
+	,'Job5' `
+	,'Job6' `
+	,'Job7' `
+	,'Job8' `
+	,'Job9' `
+	,'Job10' `
+	,'Job11' `
+	,'Job12' `
+	,'Job13' `
+	,'Job14' `
+	,'Job15' `
+	,'Job16' `
+	,'Job17' `
+	,'Job18' `
+	,'Job19' `
+	,'Job20' `
+	,'Job21' `
+	,'Job22' `
+	,'Job23' `
+	,'Job24' `
+	,'Job25' `
 	-Force |ft -AutoSize 
 }
 
 <#
 #TSQL
 
-:connect fldsvrsql03
+:connect PRIMARYSVR
 go
 use msdb
 go
@@ -60,10 +60,10 @@ SELECT ','''+NAME+''' `' [Enabled] FROM SYSJOBS J WHERE LEN(NAME)=36 ORDER  BY 1
 ## replcared by SSRSFailover.sql
 
 #Refresh SSRS Jobs but disable.
-$replicas = 'FLDSVRSQL05','MLBSVRSQL02'
+$replicas = 'SECONDARYSVR1','SECONDARYSVR2'
 foreach ($svr in $replicas)
 {
-	Copy-DbaAgentJob -Source FLDSVRSQL03 -Destination $svr -Job `
+	Copy-DbaAgentJob -Source PRIMARYSVR -Destination $svr -Job `
 '02E1243E-C7A6-4337-9BDF-C893990B89F9' `
 ,'030599D6-C5A5-46E9-A008-BCB273520E55' `
 ,'0631ED86-7A54-4F86-A897-BEA9B788A348' `

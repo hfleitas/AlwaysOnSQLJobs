@@ -1,10 +1,10 @@
 # if they exist they will be skipped. I deleted the ones prior to overwrite.
 
 
-$replicas = 'FLDSVRSQL16'
+$replicas = 'SECONDARYSVR1'
 foreach ($svr in $replicas)
 {
-	Copy-DbaAgentJob -Source FLDSVRSQL15 -Destination $svr |ft -AutoSize 
+	Copy-DbaAgentJob -Source PRIMARYSVR -Destination $svr |ft -AutoSize 
 }
 
 <#
