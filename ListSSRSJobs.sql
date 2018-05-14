@@ -1,7 +1,6 @@
 ﻿-- Must run in SQLCMD.
 
---:connect RPTSVR01 
-
+:connect FLDSVRSQL03
 go
 use msdb
 go
