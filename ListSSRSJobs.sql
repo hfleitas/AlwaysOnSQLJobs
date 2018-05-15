@@ -1,6 +1,6 @@
 ﻿-- Must run in SQLCMD.
 
-:connect PRIMARYSVR
+--:connect PRIMARYSVR
 go
 use msdb
 go
