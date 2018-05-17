@@ -40,7 +40,7 @@ begin
 	execute dbawork.dbo.uspTest --@tbd = @var
 end
 else begin
-	print '0 --pass: no var.'
+	print '0 --pass: no var. but cant do this cause I need to set the var.'
 end
 go
 
