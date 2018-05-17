@@ -31,6 +31,7 @@
     <Compile Include="Copy-DbaAgentJob.ps1" />
     <Compile Include="ITCluster.ps1" />
     <Compile Include="SSRSFailover.ps1" />
+    <Compile Include="upcic.ps1" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" />
