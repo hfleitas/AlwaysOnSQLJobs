@@ -3,7 +3,9 @@ Sync SQL Jobs across AlwaysOn replicas.
 
 ## WhoIsActive (runs every 30 secs)
 
-* step 1: LoggingActivity
+### Steps
+
+1. LoggingActivity
 ```
 if exists (select 1 
 	from  sys.dm_hadr_availability_replica_states as ars
@@ -24,7 +26,7 @@ else begin
 end
 ```
 
-* step 2: AGFailoverBackupMaintJobs 
+2. AGFailoverBackupMaintJobs 
 ```
 if exists (select 1 
 	from  sys.dm_hadr_availability_replica_states as ars
@@ -79,7 +81,7 @@ end
 end
 ```
 
-* step 3: AlertRedoQueueSize
+3. AlertRedoQueueSize
 ```
 if exists (select 1 
 	from  sys.dm_hadr_availability_replica_states as ars
