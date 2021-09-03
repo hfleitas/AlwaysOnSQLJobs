@@ -3,7 +3,7 @@ Sync SQL Jobs across AlwaysOn replicas.
 
 ## WhoIsActive - runs every 30secs
 
-`
+```
 if exists (select 1 
 	from  sys.dm_hadr_availability_replica_states as ars
 	inner join sys.availability_group_listeners as agl on ars.group_id = agl.group_id
@@ -55,4 +55,4 @@ else begin
 	print 'Server is not Primary for LG.'
 end
 end
-`
+```
