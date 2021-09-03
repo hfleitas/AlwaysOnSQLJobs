@@ -1,8 +1,30 @@
 # AlwaysOnSQLJobs
 Sync SQL Jobs across AlwaysOn replicas.
 
-## WhoIsActive - runs every 30secs
+## WhoIsActive (runs every 30 secs)
 
+* step 1: LoggingActivity
+```
+if exists (select 1 
+	from  sys.dm_hadr_availability_replica_states as ars
+	inner join sys.availability_group_listeners as agl on ars.group_id = agl.group_id
+	inner join sys.availability_replicas as arcn on arcn.replica_id = ars.replica_id
+	where ars.role_desc = 'PRIMARY'
+	and ars.operational_state_desc = 'ONLINE'
+	and agl.dns_name = 'LG1'
+	and arcn.replica_server_name = @@SERVERNAME)
+
+begin
+	--job step here:
+	execute uspLogWhoIsActive
+end
+
+else begin
+	print 'Server is not Primary for LG.'
+end
+```
+
+* step 2: AGFailoverBackupMaintJobs 
 ```
 if exists (select 1 
 	from  sys.dm_hadr_availability_replica_states as ars
@@ -54,5 +76,26 @@ else begin
 else begin
 	print 'Server is not Primary for LG.'
 end
+end
+```
+
+* step 3: AlertRedoQueueSize
+```
+if exists (select 1 
+	from  sys.dm_hadr_availability_replica_states as ars
+	inner join sys.availability_group_listeners as agl on ars.group_id = agl.group_id
+	inner join sys.availability_replicas as arcn on arcn.replica_id = ars.replica_id
+	where ars.role_desc = 'PRIMARY'
+	and ars.operational_state_desc = 'ONLINE'
+	and agl.dns_name = 'LG1'
+	and arcn.replica_server_name = @@SERVERNAME)
+
+begin
+	--job step here:
+	execute dbawork.dbo.uspAlertRedoQueueSize
+end
+
+else begin
+	print 'Server is not Primary for LG.'
 end
 ```
